@@ -43,23 +43,6 @@ server <- function(input, output, session) {
   places_map$area_sqkm <- area(places_map) / 1000000
   places_map$area_sqmi <- 0.386102 * places_map$area_sqkm
   
-  
-  # Read in California Outline data
-  ca_outline <- readOGR(dsn = 'shapefile/cb_2018_us_state_500k.shp', layer = "cb_2018_us_state_500k", GDAL1_integer64_policy = TRUE)
-  ca_outline <- ca_outline[ca_outline$NAME == "California",]
-  
-  # Apply projection
-  ca_outline <- sp::spTransform(ca_outline,projection)
-  
-  # Merge Population Data
-  df_small <- df[df$Year == 2021,]
-  places_map <- merge(places_map, df_small, by = "CITY", all.x=TRUE)
-  
-  # Calc respective population densities
-  places_map$pop_sqkm <- places_map$Total_Population / places_map$area_sqkm
-  places_map$pop_sqmi <- places_map$Total_Population / places_map$area_sqmi 
-  
-  
   # Track changes in input values
   changable_vals <- reactive({
     list(input$distance_units, input$year)
@@ -67,10 +50,21 @@ server <- function(input, output, session) {
   
   observeEvent(changable_vals(), {
     
-    # Get distance measure
-    choices_distance <- c("Square Miles" = "pop_sqmi", "Square Kilometers" = "pop_sqkm")
+    # Filter to relevant year
+    #places_map_slice <- places_map[places_map$Year == input$year,]
     
-    distance_units <- places_map[[input$distance_units]]
+    # Merge Population Data
+    df_small <- df[df$Year == input$year,]
+    places_map_slice <- merge(places_map, df_small, by = "CITY", all.x=TRUE)
+    
+    # Calc respective population densities
+    places_map_slice$pop_sqkm <- places_map_slice$Total_Population / places_map_slice$area_sqkm
+    places_map_slice$pop_sqmi <- places_map_slice$Total_Population / places_map_slice$area_sqmi
+    
+    # Get distance measure
+    choices_distance <- c("Sq Mi" = "pop_sqmi", "Sq Km" = "pop_sqkm")
+    
+    distance_units <- places_map_slice[[input$distance_units]]
     distance_name <- names(choices_distance)[choices_distance == input$distance_units]
     print(paste0(input$distance_units))
     print(distance_name)
@@ -84,11 +78,12 @@ server <- function(input, output, session) {
     # Create area labels
     labels <- sprintf(
       "<strong>%s</strong><br/>%g Population / %s",
-      places_map$CITY, distance_units, distance_name
+      places_map_slice$CITY, places_map_slice[[input$distance_units]], distance_name
     ) %>% lapply(htmltools::HTML)
+    print(labels)
     
     output$map <- renderLeaflet({
-      leaflet(places_map) %>%
+      leaflet(places_map_slice) %>%
         addTiles() %>%
         addPolygons(color = "#444444",
                     weight = 0.25,
@@ -101,10 +96,9 @@ server <- function(input, output, session) {
                       style = list("font-weight" = "normal", padding = "3px 8px"),
                       textsize = "15px",
                       direction = "auto")
-        ) %>%
+                    ) %>%
         addLegend(pal = places_palette, values = ~distance_units, opacity = 1,
-                  title = paste0("Population / ", distance_name)) %>%
-      addPolygons(data=ca_outline, color = '#444444', weight = 1, opacity = 1.0, fillOpacity = 0)
+                  title = paste0("Population / ", distance_name))
     })
     
   })
