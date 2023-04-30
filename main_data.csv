@@ -1,4 +1,4 @@
-,OBJECTID,COUNTY,CITY,Shape__Area,Shape__Length,GlobalID,Geography,Geographic Area Name,Estimate!!SEX AND AGE!!Total population,Year,City
+,OBJECTID,COUNTY,CITY,Shape__Area,Shape__Length,GlobalID,Geography,Geographic Area Name,Total_Population,Year,City
 0,1,San Bernardino,Adelanto,202527216.65625,122818.299432443,a112aaa2-6c60-4c6f-83c5-5a03126064e8,1600000US0600296,"Adelanto city, California",29764.0,2010,Adelanto
 1,1,San Bernardino,Adelanto,202527216.65625,122818.299432443,a112aaa2-6c60-4c6f-83c5-5a03126064e8,1600000US0600296,"Adelanto city, California",30670.0,2011,Adelanto
 2,1,San Bernardino,Adelanto,202527216.65625,122818.299432443,a112aaa2-6c60-4c6f-83c5-5a03126064e8,1600000US0600296,"Adelanto city, California",31040.0,2012,Adelanto
