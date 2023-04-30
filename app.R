@@ -9,14 +9,16 @@ ui <- fluidPage(
   titlePanel("California Population Density (by City)"),
   
   sidebarLayout(
-    sidebarPanel({
-      choices_distance <- choices_distance <- c("Square Miles" = "pop_sqmi", "Square Kilometers" = "pop_sqkm")
+    sidebarPanel(
       selectizeInput('distance_units',
                      label = "Square Distance Measure",
-                     choices=choices_distance,
-                     selected = "Square Miles")
-                  },
-                 width=4),
+                     choices=c("Square Miles" = "pop_sqmi", "Square Kilometers" = "pop_sqkm"),
+                     selected = "Square Miles"),
+      selectizeInput('year',
+                     label = "Year",
+                     choices= seq(2010, 2021, by=1),
+                     selected = 2021),
+            width = 4),
     
     mainPanel(
       tags$style(type = "text/css", "#map {height: calc(85vh) !important;}"),
@@ -24,6 +26,7 @@ ui <- fluidPage(
     )
   )
 )
+
 server <- function(input, output, session) {
   
   # Read in Population Data
@@ -57,9 +60,12 @@ server <- function(input, output, session) {
   places_map$pop_sqmi <- places_map$Total_Population / places_map$area_sqmi 
   
   
-  # Track changes in distance units
+  # Track changes in input values
+  changable_vals <- reactive({
+    list(input$distance_units, input$year)
+    })
   
-  observeEvent(input$distance_units, {
+  observeEvent(changable_vals(), {
     
     # Get distance measure
     choices_distance <- c("Square Miles" = "pop_sqmi", "Square Kilometers" = "pop_sqkm")
