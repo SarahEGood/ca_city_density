@@ -6,7 +6,23 @@ library(rgdal)
 library(raster)
 
 ui <- fluidPage(
-  leafletOutput('map')
+  titlePanel("California Population Density (by City)"),
+  
+  sidebarLayout(
+    sidebarPanel({
+      choices_distance <- choices_distance <- c("Square Miles" = "pop_sqmi", "Square Kilometers" = "pop_sqkm")
+      selectizeInput('distance_units',
+                     label = "Square Distance Measure",
+                     choices=choices_distance,
+                     selected = "Square Miles")
+                  },
+                 width=4),
+    
+    mainPanel(
+      tags$style(type = "text/css", "#map {height: calc(85vh) !important;}"),
+      leafletOutput('map')
+    )
+  )
 )
 server <- function(input, output, session) {
   
@@ -40,36 +56,52 @@ server <- function(input, output, session) {
   places_map$pop_sqkm <- places_map$Total_Population / places_map$area_sqkm
   places_map$pop_sqmi <- places_map$Total_Population / places_map$area_sqmi 
   
-  # Create area palette
-  places_palette <- colorNumeric(
-    palette = c('lightblue', 'maroon'),
-    domain = places_map$pop_sqmi
-  )
   
-  # Create area labels
-  labels <- sprintf(
-      "<strong>%s</strong><br/>%g Population / square mile",
-      places_map$CITY, places_map$pop_sqmi
+  # Track changes in distance units
+  
+  observeEvent(input$distance_units, {
+    
+    # Get distance measure
+    choices_distance <- c("Square Miles" = "pop_sqmi", "Square Kilometers" = "pop_sqkm")
+    
+    distance_units <- places_map[[input$distance_units]]
+    distance_name <- names(choices_distance)[choices_distance == input$distance_units]
+    print(paste0(input$distance_units))
+    print(distance_name)
+    
+    # Create area palette
+    places_palette <- colorNumeric(
+      palette = c('lightblue', 'maroon'),
+      domain = distance_units
+    )
+    
+    # Create area labels
+    labels <- sprintf(
+      "<strong>%s</strong><br/>%g Population / %s",
+      places_map$CITY, distance_units, distance_name
     ) %>% lapply(htmltools::HTML)
-  
-  output$map <- renderLeaflet({
-    leaflet(places_map) %>%
-      addTiles() %>%
-      addPolygons(color = "#444444",
-                  weight = 0.25,
-                  smoothFactor = 0.2,
-                  opacity = 1.0,
-                  fillOpacity = 0.75,
-                  fillColor = ~places_palette(places_map$pop_sqmi),
-                  label = labels,
-                  labelOptions = labelOptions(
-                    style = list("font-weight" = "normal", padding = "3px 8px"),
-                    textsize = "15px",
-                    direction = "auto")
-                  ) %>%
-      addLegend(pal = places_palette, values = ~places_map$pop_sqmi, opacity = 1,
-                title = "Population Percentile") #%>%
-      #addPolygons(data=ca_outline, color = '#444444', weight = 3, opacity = 1.0, fillOpacity = 0)
+    
+    output$map <- renderLeaflet({
+      leaflet(places_map) %>%
+        addTiles() %>%
+        addPolygons(color = "#444444",
+                    weight = 0.25,
+                    smoothFactor = 0.2,
+                    opacity = 1.0,
+                    fillOpacity = 0.75,
+                    fillColor = ~places_palette(distance_units),
+                    label = labels,
+                    labelOptions = labelOptions(
+                      style = list("font-weight" = "normal", padding = "3px 8px"),
+                      textsize = "15px",
+                      direction = "auto")
+        ) %>%
+        addLegend(pal = places_palette, values = ~distance_units, opacity = 1,
+                  title = paste0("Population / ", distance_name)) %>%
+      addPolygons(data=ca_outline, color = '#444444', weight = 1, opacity = 1.0, fillOpacity = 0)
+    })
+    
   })
+  
 }
 shinyApp(ui, server)
