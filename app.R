@@ -24,15 +24,38 @@ server <- function(input, output, session) {
   
   # Merge Population Data
   df_small <- df[df$Year == 2021,]
-  #places_map@data <- df_small %>% right_join(places_map@data, by = c("CITY"="CITY"))
+  places_map <- merge(places_map, df_small, by = "CITY", all.x=TRUE)
   
+  # Create area palette
+  places_palette <- colorNumeric(
+    palette = c('lightblue', 'maroon'),
+    domain = places_map$Total_Population
+  )
+  
+  # Create area labels
+  labels <- sprintf(
+      "<strong>%s</strong><br/>%g people",
+      places_map$CITY, places_map$Total_Population
+    ) %>% lapply(htmltools::HTML)
   
   output$map <- renderLeaflet({
     leaflet(places_map) %>%
       addTiles() %>%
-      addPolygons(color = "#444444", fillColor = 'blue', weight = 1, smoothFactor = 0.5,
-                  opacity = 1.0, fillOpacity = 0.5) %>%
-      addPolygons(data=ca_outline, color = '#444444', weight = 3, opacity = 1.0, fillOpacity = 0)
+      addPolygons(color = "#444444",
+                  weight = 0.25,
+                  smoothFactor = 0.2,
+                  opacity = 1.0,
+                  fillOpacity = 0.75,
+                  fillColor = ~places_palette(places_map$Total_Population),
+                  label = labels,
+                  labelOptions = labelOptions(
+                    style = list("font-weight" = "normal", padding = "3px 8px"),
+                    textsize = "15px",
+                    direction = "auto")
+                  ) %>%
+      addLegend(pal = places_palette, values = ~places_map$Total_Population, opacity = 1,
+                title = "Population Percentile") #%>%
+      #addPolygons(data=ca_outline, color = '#444444', weight = 3, opacity = 1.0, fillOpacity = 0)
   })
 }
 shinyApp(ui, server)
