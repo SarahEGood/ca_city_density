@@ -1,3 +1,5 @@
 census_data/
 shapefile/
 .Rproj.user
+.RData
+.Rhistory
