@@ -31,12 +31,10 @@ ui <- fluidPage(
 server <- function(input, output, session) {
 
   # Read in Population Data
-  df <- read.csv('main_data.csv')
+  #df <- read.csv('main_data.csv')
 
   # Read in and transform projection for CA places
-  places_map <- readOGR(dsn = 'shapefile/City_Boundaries.shp',
-                        layer = 'City_Boundaries',
-                        GDAL1_integer64_policy = TRUE)
+  places_map <- readOGR('main_data.shp')
 
   crs_format <- '+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0'
   projection <- sp::CRS(crs_format)
@@ -46,6 +44,10 @@ server <- function(input, output, session) {
 
   places_map$area_sqkm <- area(places_map) / 1000000
   places_map$area_sqmi <- 0.386102 * places_map$area_sqkm
+  
+  # Calc respective population densities
+  places_map$pop_sqkm <- places_map$Total_Popu / places_map$area_sqkm
+  places_map$pop_sqmi <- places_map$Total_Popu / places_map$area_sqmi
 
   # Track changes in input values
   changable_vals <- reactive({
@@ -55,18 +57,10 @@ server <- function(input, output, session) {
   observeEvent(changable_vals(), {
 
     # Merge Population Data
-    df_small <- df[df$Year == input$year,]
+    #df_small <- df[df$Year == input$year,]
 
     # Filter to relevant year
-    places_map_slice <- merge(places_map, df_small, by = "CITY", all.x=TRUE)
-
-    # Calc respective population densities
-    pop <-  places_map_slice$Total_Population
-    area_sqkm <- places_map_slice$area_sqkm
-    area_sqmi <- places_map_slice$area_sqmi
-
-    places_map_slice$pop_sqkm <- pop / area_sqkm
-    places_map_slice$pop_sqmi <- pop / area_sqmi
+    places_map_slice <- places_map[places_map$Year == input$year,]
 
     # Get distance measure
     choices_distance <- c("Sq Mi" = "pop_sqmi", "Sq Km" = "pop_sqkm")
@@ -88,7 +82,6 @@ server <- function(input, output, session) {
         places_map_slice[[input$distance_units]],
         distance_name
       ) %>% lapply(htmltools::HTML)
-    print(labels)
 
     output$map <- renderLeaflet({
       leaflet(places_map_slice) %>%
