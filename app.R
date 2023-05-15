@@ -49,6 +49,51 @@ server <- function(input, output, session) {
   places_map$pop_sqkm <- places_map$Total_Popu / places_map$area_sqkm
   places_map$pop_sqmi <- places_map$Total_Popu / places_map$area_sqmi
 
+  # Render initial map
+  initialYear <- 2021
+  initialDistUnit <- "pop_sqmi"
+  initDistName <- "Sq Mi"
+
+  # Filter to initial year
+  places_map_slice <- places_map[places_map$Year == initialYear,]
+  
+  # Get distance col for palette
+  initialDistUnit <- places_map_slice[[initialDistUnit]]
+
+  # Init Palette & legend
+  places_palette <- colorNumeric(
+    palette = c('lightblue', 'maroon'),
+    domain = initialDistUnit
+  )
+
+  labels <- sprintf(
+    "<strong>%s</strong><br/>%g Population / %s",
+      places_map_slice$CITY,
+      initialDistUnit,
+      initDistName
+    ) %>% lapply(htmltools::HTML)
+
+  # Render initial map
+  output$map <- renderLeaflet({
+    leaflet(places_map_slice) %>%
+      addTiles() %>%
+      addPolygons(color = "#444444",
+                  weight = 0.25,
+                  smoothFactor = 0.2,
+                  opacity = 1.0,
+                  fillOpacity = 0.75,
+                  fillColor = ~places_palette(initialDistUnit),
+                  label = labels,
+                  labelOptions = labelOptions(
+                    style = list("font-weight" = "normal",
+                                  padding = "3px 8px"),
+                    textsize = "15px",
+                    direction = "auto")
+                  ) %>%
+      addLegend(pal = places_palette, values = ~initialDistUnit, opacity = 1,
+                title = paste0("Population / ", initDistName))
+  })
+
   # Track changes in input values
   changable_vals <- reactive({
     list(input$distance_units, input$year)
@@ -83,27 +128,26 @@ server <- function(input, output, session) {
         distance_name
       ) %>% lapply(htmltools::HTML)
 
-    output$map <- renderLeaflet({
-      leaflet(places_map_slice) %>%
-        addTiles() %>%
-        addPolygons(color = "#444444",
-                    weight = 0.25,
-                    smoothFactor = 0.2,
-                    opacity = 1.0,
-                    fillOpacity = 0.75,
-                    fillColor = ~places_palette(distance_units),
-                    label = labels,
-                    labelOptions = labelOptions(
-                      style = list("font-weight" = "normal",
-                                    padding = "3px 8px"),
-                      textsize = "15px",
-                      direction = "auto")
-                    ) %>%
-        addLegend(pal = places_palette, values = ~distance_units, opacity = 1,
-                  title = paste0("Population / ", distance_name))
+    leafletProxy("map", data = places_map_slice) %>%
+      addPolygons(color = "#444444",
+                  weight = 0.25,
+                  smoothFactor = 0.2,
+                  opacity = 1.0,
+                  fillOpacity = 0.75,
+                  fillColor = ~places_palette(distance_units),
+                  label = labels,
+                  labelOptions = labelOptions(
+                    style = list("font-weight" = "normal",
+                                 padding = "3px 8px"),
+                    textsize = "15px",
+                    direction = "auto")
+      ) %>%
+      clearControls() %>%
+      addLegend(pal = places_palette, values = ~distance_units, opacity = 1,
+                title = paste0("Population / ", distance_name))
+        
     })
 
-  })
+  }
 
-}
 shinyApp(ui, server)
